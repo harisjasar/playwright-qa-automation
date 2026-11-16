@@ -1,0 +1,22 @@
+{
+  "name": "limestone-digital-qa-test-task",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QA automation test task: Playwright + TypeScript UI/API framework, Postman collection, SQL queries",
+  "type": "commonjs",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --project=ui",
+    "test:api": "playwright test --project=api",
+    "report": "playwright show-report",
+    "postman": "npx -y newman@6 run postman/jsonplaceholder.postman_collection.json -e postman/jsonplaceholder.postman_environment.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.6",
+    "dotenv": "^18.0.10",
+    "typescript": "^7.0.2",
+    "zod": "^4.6.7"
+  }
+}

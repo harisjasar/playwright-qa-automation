@@ -1,0 +1,38 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+      # No defaults: configure these under Settings > Secrets and variables > Actions.
+      # If one is missing, config/env.ts fails the run with the variable's name.
+      SAUCE_BASE_URL: ${{ vars.SAUCE_BASE_URL }}
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      SAUCE_STANDARD_USER: ${{ secrets.SAUCE_STANDARD_USER }}
+      SAUCE_PROBLEM_USER: ${{ secrets.SAUCE_PROBLEM_USER }}
+      SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npx playwright test
+      - run: npm run postman
+        if: ${{ !cancelled() }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

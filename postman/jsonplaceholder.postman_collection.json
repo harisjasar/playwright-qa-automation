@@ -1,0 +1,220 @@
+{
+	"info": {
+		"_postman_id": "6b0f3c1e-2d4a-4b8e-9c71-3f5a2e8d1b40",
+		"name": "JSONPlaceholder - users & posts",
+		"description": "Part 2 of the AQA test task. Run the requests in order: \"Get users\" stores the first user's id in the collection variable `userId`, \"Get posts by user\" checks that every post belongs to that user, and \"Get missing post\" expects 404.\n\nShared logic lives in the collection-level test script (status check, JSON schema validation of every array item, post ownership). Each request's pre-request script only declares `expectedStatus` and, for list endpoints, `schemaName`.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get users",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.variables.set('expectedStatus', 200);",
+							"pm.variables.set('schemaName', 'user');"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Deterministic selection: always the first user in the list.",
+							"pm.test('[Get users] first user id is stored in collection variable userId', function () {",
+							"    const users = pm.response.json();",
+							"    pm.expect(users).to.be.an('array').that.is.not.empty;",
+							"    const userId = users[0].id;",
+							"    pm.expect(userId).to.be.a('number');",
+							"    pm.collectionVariables.set('userId', userId);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/users",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			}
+		},
+		{
+			"name": "Get posts by user",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.variables.set('expectedStatus', 200);",
+							"pm.variables.set('schemaName', 'post');"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/posts?userId={{userId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"posts"
+					],
+					"query": [
+						{
+							"key": "userId",
+							"value": "{{userId}}"
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "Get missing post",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.variables.set('expectedStatus', 404);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/posts/{{missingPostId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"posts",
+						"{{missingPostId}}"
+					]
+				}
+			}
+		}
+	],
+	"event": [
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Shared assertions for every request in this collection.",
+					"// Each request's pre-request script declares what it expects:",
+					"//   expectedStatus - HTTP status code (number)",
+					"//   schemaName     - 'user' | 'post' (optional; when set the body must be a non-empty array of that shape)",
+					"const SCHEMAS = {",
+					"    user: {",
+					"        type: 'object',",
+					"        required: ['id', 'name', 'username', 'email'],",
+					"        properties: {",
+					"            id: { type: 'integer', minimum: 1 },",
+					"            name: { type: 'string', minLength: 1 },",
+					"            username: { type: 'string', minLength: 1 },",
+					"            email: { type: 'string', minLength: 1 }",
+					"        }",
+					"    },",
+					"    post: {",
+					"        type: 'object',",
+					"        required: ['userId', 'id', 'title', 'body'],",
+					"        properties: {",
+					"            userId: { type: 'integer', minimum: 1 },",
+					"            id: { type: 'integer', minimum: 1 },",
+					"            title: { type: 'string', minLength: 1 },",
+					"            body: { type: 'string', minLength: 1 }",
+					"        }",
+					"    }",
+					"};",
+					"",
+					"const requestName = pm.info.requestName;",
+					"const expectedStatus = Number(pm.variables.get('expectedStatus'));",
+					"const schemaName = pm.variables.get('schemaName');",
+					"",
+					"pm.test(`[${requestName}] status code is ${expectedStatus}`, function () {",
+					"    pm.expect(expectedStatus, 'expectedStatus must be set in the pre-request script').to.be.a('number').and.not.NaN;",
+					"    pm.response.to.have.status(expectedStatus);",
+					"});",
+					"",
+					"if (schemaName) {",
+					"    const schema = SCHEMAS[schemaName];",
+					"    let items;",
+					"",
+					"    pm.test(`[${requestName}] body is a non-empty array`, function () {",
+					"        pm.expect(schema, `unknown schemaName \"${schemaName}\"`).to.be.an('object');",
+					"        items = pm.response.json();",
+					"        pm.expect(items).to.be.an('array').that.is.not.empty;",
+					"    });",
+					"",
+					"    pm.test(`[${requestName}] every item matches the \"${schemaName}\" schema`, function () {",
+					"        pm.expect(items).to.be.an('array').that.is.not.empty;",
+					"        pm.expect(items).to.have.jsonSchema({ type: 'array', items: schema });",
+					"    });",
+					"",
+					"    if (schemaName === 'post') {",
+					"        pm.test(`[${requestName}] every post belongs to the selected user`, function () {",
+					"            const userId = Number(pm.collectionVariables.get('userId'));",
+					"            pm.expect(userId, 'userId collection variable must be set by \"Get users\"').to.be.a('number').and.not.NaN;",
+					"            pm.expect(items).to.be.an('array').that.is.not.empty;",
+					"            items.forEach(function (post) {",
+					"                pm.expect(post.userId, `post ${post.id} userId`).to.eql(userId);",
+					"            });",
+					"        });",
+					"    }",
+					"}",
+					"",
+					"// Local variables survive into the next request in a run, so clear them:",
+					"// each request must declare its own expectations.",
+					"pm.variables.unset('expectedStatus');",
+					"pm.variables.unset('schemaName');"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "missingPostId",
+			"value": "99999",
+			"type": "string"
+		}
+	]
+}
